@@ -3,6 +3,7 @@ package com.example.memory_auth_microservice.util;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.nio.file.Files;
@@ -19,19 +20,50 @@ import java.util.Map;
 import java.util.function.Function;
 
 @Service
+@Slf4j
 public class JwtTokenUtil {
 
     private final PrivateKey privateKey;
     private final PublicKey publicKey;
 
     // 構造函數中加載公鑰和私鑰
-    public JwtTokenUtil() throws Exception {
-        String privateKeyPem = new String(Files.readAllBytes(Paths.get("src/main/resources/key/private_key.pem")));
-        this.privateKey = loadPrivateKey(privateKeyPem);
+//    public JwtTokenUtil() throws Exception {
+//        String privateKeyPem = new String(Files.readAllBytes(Paths.get("src/main/resources/key/private_key.pem")));
+//        this.privateKey = loadPrivateKey(privateKeyPem);
+//
+//        String publicKeyPem = new String(Files.readAllBytes(Paths.get("src/main/resources/key/public_key.pem")));
+//        this.publicKey = loadPublicKey(publicKeyPem);
+//    }
 
-        String publicKeyPem = new String(Files.readAllBytes(Paths.get("src/main/resources/key/public_key.pem")));
+    public JwtTokenUtil() throws Exception {
+        // Check if the environment variables are set
+        String privateKeyPath = System.getenv("JWT_PRIVATE_KEY_PATH");
+        String publicKeyPath = System.getenv("JWT_PUBLIC_KEY_PATH");
+
+
+
+        // Use the provided paths or fallback to the local file paths for development
+        if (privateKeyPath == null) {
+            privateKeyPath = "src/main/resources/key/private_key.pem";
+        }
+        if (publicKeyPath == null) {
+            publicKeyPath = "src/main/resources/key/public_key.pem";
+        }
+
+//        log.info("------ privateKeyPath: " + privateKeyPath);
+//        log.info("------ publicKeyPath: " + publicKeyPath);
+
+        // Load the private key
+        String privateKeyPem = new String(Files.readAllBytes(Paths.get(privateKeyPath)));
+        this.privateKey = loadPrivateKey(privateKeyPem);
+//        log.info("------ privateKeyPem: " + privateKeyPem);
+
+        // Load the public key
+        String publicKeyPem = new String(Files.readAllBytes(Paths.get(publicKeyPath)));
         this.publicKey = loadPublicKey(publicKeyPem);
+//        log.info("------ publicKeyPem: " + publicKeyPem);
     }
+
 
     // 加載私鑰使用來簽名
     private PrivateKey loadPrivateKey(String key) throws Exception {
