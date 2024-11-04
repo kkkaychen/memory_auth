@@ -114,18 +114,22 @@ public class JwtTokenUtil {
         return extractExpiration(token).before(new Date());
     }
 
-    // 生成 JWT Token
-    public String generateToken(String username) {
-        Map<String, Object> claims = new HashMap<>();
-        return createToken(claims, username);
+    // 生成 access Token
+    public String generateAccessToken(String username) {
+        return createToken(username, 1000 * 60 * 15); // 15 分鐘有效
     }
 
-    private String createToken(Map<String, Object> claims, String subject) {
+    // 生成 refresh Token
+    public String generateRefreshToken(String username) {
+        return createToken(username, 1000 * 60 * 60 * 24 * 7); // 7 天有效
+    }
+
+
+    private String createToken(String subject, long expirationTime) {
         return Jwts.builder()
-                .setClaims(claims)
                 .setSubject(subject)
                 .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 10))  // 10 小時過期時間
+                .setExpiration(new Date(System.currentTimeMillis() + expirationTime))
                 .signWith(privateKey, SignatureAlgorithm.RS256)
                 .compact();
     }
