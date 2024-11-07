@@ -1,12 +1,15 @@
 package com.example.memory_auth_microservice.config;
 
 import com.example.memory_auth_microservice.filter.JwtRequestFilter;
+import com.example.memory_auth_microservice.provider.EmployeeAuthenticationProvider;
+import com.example.memory_auth_microservice.provider.MemberAuthenticationProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -26,10 +29,14 @@ import java.util.List;
 @EnableWebSecurity
 public class MySecurityConfig {
     private final JwtRequestFilter jwtRequestFilter;
+    private final MemberAuthenticationProvider memberAuthenticationProvider;
+    private final EmployeeAuthenticationProvider employeeAuthenticationProvider;
 
     @Autowired
-    public MySecurityConfig(JwtRequestFilter jwtRequestFilter) {
+    public MySecurityConfig(JwtRequestFilter jwtRequestFilter, MemberAuthenticationProvider memberAuthenticationProvider, EmployeeAuthenticationProvider employeeAuthenticationProvider) {
         this.jwtRequestFilter = jwtRequestFilter;
+        this.memberAuthenticationProvider = memberAuthenticationProvider;
+        this.employeeAuthenticationProvider = employeeAuthenticationProvider;
     }
 
     @Bean
@@ -39,7 +46,6 @@ public class MySecurityConfig {
     }
 
     // 提供 AuthenticationManager 作為 Bean
-    @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
         return authenticationConfiguration.getAuthenticationManager();
     }
@@ -49,16 +55,17 @@ public class MySecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
                 .httpBasic(Customizer.withDefaults())
-                .formLogin(Customizer.withDefaults())
                 .authorizeHttpRequests(request -> request
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()  // 允許 OPTIONS 預檢查請求
-                        .requestMatchers("/auth/authenticate").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/**").permitAll()  // 允許 GET 請求無需 token
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()  // 允許 OPTIONS 請求無需 token
+                        .requestMatchers("/auth/member", "/auth/emp").permitAll()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))  // 無狀態
                 .addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class)  // 添加 JWT 過濾器
                 .build();
     }
+
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
@@ -71,5 +78,13 @@ public class MySecurityConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
+    }
+
+    @Bean
+    public AuthenticationManager authenticationManager(HttpSecurity http) throws Exception {
+        return http.getSharedObject(AuthenticationManagerBuilder.class)
+                .authenticationProvider(memberAuthenticationProvider)
+                .authenticationProvider(employeeAuthenticationProvider)
+                .build();
     }
 }

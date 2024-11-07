@@ -1,5 +1,7 @@
 package com.example.memory_auth_microservice.util;
 
+import com.example.memory_auth_microservice.dao.MemberDao;
+import com.example.memory_auth_microservice.model.MemEntity;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -15,8 +17,6 @@ import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.function.Function;
 
 @Service
@@ -25,6 +25,7 @@ public class JwtTokenUtil {
 
     private final PrivateKey privateKey;
     private final PublicKey publicKey;
+    private final MemberDao memberDao;
 
     // 構造函數中加載公鑰和私鑰
 //    public JwtTokenUtil() throws Exception {
@@ -35,7 +36,8 @@ public class JwtTokenUtil {
 //        this.publicKey = loadPublicKey(publicKeyPem);
 //    }
 
-    public JwtTokenUtil() throws Exception {
+    public JwtTokenUtil(MemberDao memberDao) throws Exception {
+        this.memberDao = memberDao;
         // Check if the environment variables are set
         String privateKeyPath = System.getenv("JWT_PRIVATE_KEY_PATH");
         String publicKeyPath = System.getenv("JWT_PUBLIC_KEY_PATH");
@@ -115,13 +117,28 @@ public class JwtTokenUtil {
     }
 
     // 生成 access Token
-    public String generateAccessToken(String username) {
-        return createToken(username, 1000 * 60 * 15); // 15 分鐘有效
+    public String generateAccessToken(String username, String role) {
+        MemEntity byMemEmail = memberDao.findByMemEmail(username);
+        return Jwts.builder()
+                .setSubject(username)
+                .claim("role", role)
+                .claim("memNo",byMemEmail.getMemNo())
+                .setIssuedAt(new Date(System.currentTimeMillis()))
+                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 15))
+                .signWith(privateKey, SignatureAlgorithm.RS256)
+                .compact();
+
     }
 
     // 生成 refresh Token
     public String generateRefreshToken(String username) {
-        return createToken(username, 1000 * 60 * 60 * 24 * 7); // 7 天有效
+        return Jwts.builder()
+                .setSubject(username)
+                .setIssuedAt(new Date(System.currentTimeMillis()))
+                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 24 * 7))
+                .signWith(privateKey, SignatureAlgorithm.RS256)
+                .compact();
+//        return createToken(username, 1000 * 60 * 60 * 24 * 7); // 7 天有效
     }
 
 
