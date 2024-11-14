@@ -1,6 +1,8 @@
 package com.example.memory_auth_microservice.util;
 
+import com.example.memory_auth_microservice.dao.EmpDao;
 import com.example.memory_auth_microservice.dao.MemberDao;
+import com.example.memory_auth_microservice.model.EmpEntity;
 import com.example.memory_auth_microservice.model.MemEntity;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
@@ -26,6 +28,7 @@ public class JwtTokenUtil {
     private final PrivateKey privateKey;
     private final PublicKey publicKey;
     private final MemberDao memberDao;
+    private final EmpDao empDao;
 
     // 構造函數中加載公鑰和私鑰
 //    public JwtTokenUtil() throws Exception {
@@ -36,8 +39,9 @@ public class JwtTokenUtil {
 //        this.publicKey = loadPublicKey(publicKeyPem);
 //    }
 
-    public JwtTokenUtil(MemberDao memberDao) throws Exception {
+    public JwtTokenUtil(MemberDao memberDao, EmpDao empDao) throws Exception {
         this.memberDao = memberDao;
+        this.empDao = empDao;
         // Check if the environment variables are set
         String privateKeyPath = System.getenv("JWT_PRIVATE_KEY_PATH");
         String publicKeyPath = System.getenv("JWT_PUBLIC_KEY_PATH");
@@ -117,12 +121,25 @@ public class JwtTokenUtil {
     }
 
     // 生成 access Token
-    public String generateAccessToken(String username, String role) {
+    public String generateMemberAccessToken(String username, String role) {
         MemEntity byMemEmail = memberDao.findByMemEmail(username);
         return Jwts.builder()
                 .setSubject(username)
                 .claim("role", role)
                 .claim("memNo",byMemEmail.getMemNo())
+                .setIssuedAt(new Date(System.currentTimeMillis()))
+                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 15))
+                .signWith(privateKey, SignatureAlgorithm.RS256)
+                .compact();
+
+    }
+
+    public String generateEmpAccessToken(String username, String role) {
+        EmpEntity emp = empDao.findByEmpAcc(username);
+        return Jwts.builder()
+                .setSubject(username)
+                .claim("role", role)
+                .claim("empNo",emp.getEmpNo())
                 .setIssuedAt(new Date(System.currentTimeMillis()))
                 .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 15))
                 .signWith(privateKey, SignatureAlgorithm.RS256)
@@ -138,7 +155,6 @@ public class JwtTokenUtil {
                 .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 24 * 7))
                 .signWith(privateKey, SignatureAlgorithm.RS256)
                 .compact();
-//        return createToken(username, 1000 * 60 * 60 * 24 * 7); // 7 天有效
     }
 
 

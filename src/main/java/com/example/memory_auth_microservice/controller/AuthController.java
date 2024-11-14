@@ -38,7 +38,7 @@ public class AuthController {
                     ));
 
             // 產生 access token
-            String accessToken = jwtTokenUtil.generateAccessToken(userNameAndPwd.userName(), "ROLE_MEMBER");
+            String accessToken = jwtTokenUtil.generateMemberAccessToken(userNameAndPwd.userName(), "ROLE_MEMBER");
             log.info("accessToken: " + accessToken);
             // 產生 refresh token
             String refreshToken = jwtTokenUtil.generateRefreshToken(userNameAndPwd.userName());
@@ -80,7 +80,7 @@ public class AuthController {
             ));
 
             // 產生 access token
-            String accessToken = jwtTokenUtil.generateAccessToken(userNameAndPwd.userName(), "ROLE_EMPLOYEE");
+            String accessToken = jwtTokenUtil.generateEmpAccessToken(userNameAndPwd.userName(), "ROLE_EMPLOYEE");
             log.info("accessToken: " + accessToken);
             // 產生 refresh token
             String refreshToken = jwtTokenUtil.generateRefreshToken(userNameAndPwd.userName());
